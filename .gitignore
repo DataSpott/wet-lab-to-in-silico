@@ -1,0 +1,5 @@
+.nextflow.*
+.nextflow/
+work
+results
+test_data
