@@ -4,11 +4,14 @@ process guppy_gpu {
             container = 'nanozoo/guppy_gpu:4.2.2-1--5fc71df'
             containerOptions '--gpus all'
         }
-        publishDir "${params.output}/fastq/", mode: 'copy'
+        //publishDir "${params.output}/fastq/", mode: 'copy'
+    
     input:
         tuple val(name), path(dir)
+    
     output:
         tuple val(name), path("*.fastq.gz")
+    
     script:
         println params.single
         if (params.single == true)

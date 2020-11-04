@@ -16,8 +16,7 @@ def helpMSG() {
     log.info """
     Usage:
     nextflow run wet_lab_to_in_silico.nf --dir /fast5 -profile local,docker
-    --dir         a list of accession numbers, one accession number per line, no headers
-                  e.g. 'cut -f2' on a blastn query with '-outfmt6'
+    --dir         directory where the sequencing-run is located
     
     Options:
     --cores       max cores [default: $params.cores]
@@ -46,7 +45,7 @@ if (params.dir) { dir_input_ch = Channel
 //xxxxxxxxxxxxxx//
 
 include { guppy_gpu } from './subworkflows/guppy/guppy'
-
+include { combiner } from './subworkflows/combiner/combiner'
 
 //xxxxxxxxxxxxxx//
 //***process runInfo***//
@@ -59,13 +58,13 @@ directory.eachFileRecurse {
         runInfo_location = it.toString()
     } 
 }
-//I assume there is only on "run_info.txt"-file. Otherwise we have a problem...
+//I assume there is only one "run_info.txt"-file. Otherwise we have a problem...
 
 def runInfoList = new File(runInfo_location).text.readLines()
 runInfoList = runInfoList.findAll { it.contains('#') }
 runInfoListSize = runInfoList.size()
 
-runInfo_kits_ch = Channel.fromList(runInfoList).view()
+runInfo_ch = Channel.fromList(runInfoList)//.view()
 
 if (runInfoListSize > 2) {
     params.single = false
@@ -105,10 +104,12 @@ workflow basecalling_wf {
 //xxxxxxxxxxxxx//
 
 workflow {
-    basecalling_wf(dir_input_ch)
+    combiner(runInfo_ch, basecalling_wf(dir_input_ch))
+    //basecalling_wf.out.fastq_channel.view()
 }
 
-//fastq_channel.view()
+//basecalling_wf.out.fastq_channel.view()
+
 //xxxxxxxxxxxxxx//
 //***create sampleDirs***//
 //xxxxxxxxxxxxxx//
