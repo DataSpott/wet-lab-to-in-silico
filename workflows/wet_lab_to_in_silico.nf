@@ -1,6 +1,13 @@
 #!/usr/bin/env nextflow
 nextflow.preview.dsl=2
 
+println "\u001B[32mProfile: $workflow.profile\033[0m"
+println "\033[2mCurrent User: $workflow.userName"
+println "Workdir location:"
+println "  $workflow.workDir\u001B[0m"
+println "CPUs to use: $params.cores"
+println "Output dir: $params.output"
+
 //display a help-msgs
 //if (params.help) { exit 0, helpMSG() }
 
@@ -8,21 +15,12 @@ nextflow.preview.dsl=2
 //***Inputs***//
 //xxxxxxxxxxxxxx//
 
-// eventually define the paths directly, because we want to execute it in the
-// same directory all the time
-
-// fast5 input
-//if (params.inDir) {
-//    inDir_ch = Channel
-//    .fromPath( params.inDir, checkIfExists: true)
-//    .view()
-//}
-
-if (params.inDir) { inDir_ch = Channel
-        .fromPath( params.inDir, checkIfExists: true, type: 'dir')
+if (params.dir) { dir_input_ch = Channel
+        .fromPath( params.dir, checkIfExists: true, type: 'dir')
         .map { file -> tuple(file.name, file) }
         .view()
     }
+
 // outputDirectory
 //if (params.output) { output_ch = Channel}
 
@@ -38,13 +36,20 @@ include { guppy_gpu } from './subworkflows/guppy/guppy'
 //***process runInfo***//
 //xxxxxxxxxxxxxx//
 
-runInfo_location = [params.inDir, 'run_info.txt'].join()
+directory = new File(params.dir)
+directory.eachFileRecurse { it.getClass()}
+directory.eachFileRecurse {
+    if (it.toString().contains('run_info.txt')) {
+        runInfo_location = it.toString()
+    } 
+}
+//I assume there is only on "run_info.txt"-file. Otherwise we have a problem...
 
 def runInfoList = new File(runInfo_location).text.readLines()
 runInfoList = runInfoList.findAll { it.contains('#') }
 runInfoListSize = runInfoList.size()
 
-runInfo_kits_ch = Channel.fromList(runInfoList).view()
+runInfo_kits_ch = Channel.fromList(runInfoList)//.view()
 
 if (runInfoListSize > 2) {
     params.single = false
@@ -52,7 +57,6 @@ if (runInfoListSize > 2) {
 else {
     params.single = true
 }
-println params.single
 
 
 //xxxxxxxxxxxxxx//
@@ -67,7 +71,7 @@ workflow basecalling_wf {
 
         guppy_gpu(dir_input)
 
-        if (runInfoListSize > 2) { fastq_channel = guppy_gpu.out }
+        if (params.single == true) { fastq_channel = guppy_gpu.out }
 
         else { fastq_channel = guppy_gpu.out
                             .map { it -> it[1] }
@@ -85,10 +89,10 @@ workflow basecalling_wf {
 //xxxxxxxxxxxxx//
 
 workflow {
-    basecalling_wf(inDir_ch)
+    basecalling_wf(dir_input_ch)
 }
 
-
+fastq_channel.view()
 //xxxxxxxxxxxxxx//
 //***create sampleDirs***//
 //xxxxxxxxxxxxxx//

@@ -1,15 +1,16 @@
 process guppy_gpu {
         maxForks 1
-        //if (!params.localguppy && workflow.profile.contains('docker') ) {
-        container = 'nanozoo/guppy_gpu:3.4.4-1--3dd30a4'
-        containerOptions '--gpus all'
-        //}
-        //publishDir "${params.output}/fastq/", mode: 'copy'
+        if (!params.localguppy && workflow.profile.contains('docker') ) {
+            container = 'nanozoo/guppy_gpu:4.2.2-1--5fc71df'
+            containerOptions '--gpus all'
+        }
+        publishDir "${params.output}/fastq/", mode: 'copy'
     input:
         tuple val(name), path(dir)
     output:
         tuple val(name), path("*.fastq.gz")
     script:
+        println params.single
         if (params.single == true)
         """
         guppy_basecaller -c dna_r9.4.1_450bps_hac.cfg -i ${dir} -s fastq -x auto -r --trim_strategy dna -q 0
