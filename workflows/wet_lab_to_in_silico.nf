@@ -9,7 +9,23 @@ println "CPUs to use: $params.cores"
 println "Output dir: $params.output"
 
 //display a help-msgs
-//if (params.help) { exit 0, helpMSG() }
+if (params.help) { exit 0, helpMSG() }
+
+// help
+def helpMSG() {
+    log.info """
+    Usage:
+    nextflow run wet_lab_to_in_silico.nf --dir /fast5 -profile local,docker
+    --dir         a list of accession numbers, one accession number per line, no headers
+                  e.g. 'cut -f2' on a blastn query with '-outfmt6'
+    
+    Options:
+    --cores       max cores [default: $params.cores]
+    --memory      max memory [default: $params.memory]
+    --output      directory where results are stored [default: $params.output]
+    """.stripIndent()
+}
+
 
 //xxxxxxxxxxxxxx//
 //***Inputs***//
@@ -49,7 +65,7 @@ def runInfoList = new File(runInfo_location).text.readLines()
 runInfoList = runInfoList.findAll { it.contains('#') }
 runInfoListSize = runInfoList.size()
 
-runInfo_kits_ch = Channel.fromList(runInfoList)//.view()
+runInfo_kits_ch = Channel.fromList(runInfoList).view()
 
 if (runInfoListSize > 2) {
     params.single = false
@@ -92,7 +108,7 @@ workflow {
     basecalling_wf(dir_input_ch)
 }
 
-fastq_channel.view()
+//fastq_channel.view()
 //xxxxxxxxxxxxxx//
 //***create sampleDirs***//
 //xxxxxxxxxxxxxx//
