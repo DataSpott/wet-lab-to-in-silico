@@ -2,30 +2,26 @@ process combiner {
     publishDir "${params.output}/", mode: 'copy'
 
     input:
-        val(sample) //eventuell hier "each" verwenden statt "val" oder "tuple"
+        val(sampleNumber) //eventuell hier "each" verwenden statt "val" oder "tuple"
+        val(kitInfo)
         tuple val(name), path(dir)
 
     output:
-        tuple val(sample_number), path(dir_path)
+        tuple val("${name}"), path("*")//path("/\$sample_number/*.gz"), path("/\$sample_number/*.txt") 
 
     script:
     """
-    echo ${sample}
-    echo ${name}
-    echo ${dir}
-    sample_barcode=`echo ${sample} | cut -f1 -d"#" |grep -o -E '[0-9]+'`
-    echo \$sample_barcode
-    sample_number=`echo ${sample} |  cut -f2 -d"#"`
-    echo \$sample_number
-    fastq_barcode=`echo ${name} | grep -o -E '[0-9]+'`
-    echo \$fastq_barcode
-
-    if [\$sample_barcode = \$fastq_barcode]
+    sample_barcode=\$(echo "${sampleNumber}" | cut -f1 -d"#" |grep -o -E '[0-9]+')
+    sample_number=\$(echo "${sampleNumber}" |  cut -f2 -d"#")
+    fastq_barcode=\$(echo ${name} | grep -o -E '[0-9]+')
+    
+    if [[ "\$sample_barcode" == "\$fastq_barcode" ]]
     then
-        echo \$sample_barcode
-        mkdir \$sample_number
-        cp -r ${dir} /\$sample_number
-        dir_path="\$PWD/\$sampe_number"
+        mkdir ./"\$sample_number"
+        for elements in ${kitInfo}; do
+            echo "\$elements" | tr -d "[]"  >> "\$sample_number"/runInfo.txt
+        done
+        cp -r ${dir} "\$sample_number"/
     fi
     """
 }

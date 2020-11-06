@@ -4,9 +4,10 @@ nextflow.preview.dsl=2
 println "\u001B[32mProfile: $workflow.profile\033[0m"
 println "\033[2mCurrent User: $workflow.userName"
 println "Workdir location:"
-println "  $workflow.workDir\u001B[0m"
+println "  $workflow.workDir"
 println "CPUs to use: $params.cores"
-println "Output dir: $params.output"
+println "Output dir: $params.output\u001B[0m"
+println ""
 
 //display a help-msgs
 if (params.help) { exit 0, helpMSG() }
@@ -36,9 +37,6 @@ if (params.dir) { dir_input_ch = Channel
         .view()
     }
 
-// outputDirectory
-//if (params.output) { output_ch = Channel}
-
 
 //xxxxxxxxxxxxxx//
 //***Modules***//
@@ -64,9 +62,13 @@ def runInfoList = new File(runInfo_location).text.readLines()
 runInfoList = runInfoList.findAll { it.contains('#') }
 runInfoListSize = runInfoList.size()
 
-runInfo_ch = Channel.fromList(runInfoList)//.view()
+kitInfoList = runInfoList.findAll { it.toLowerCase().contains('kit') || it.toLowerCase().contains('flowcell') || it.toLowerCase().contains('flongle')}
+runInfoList.removeAll { kitInfoList.contains(it) }
 
-if (runInfoListSize > 2) {
+runInfo_ch = Channel.fromList(runInfoList)//.view()
+kitInfo_ch = Channel.value(kitInfoList)//.view
+
+if (runInfoListSize > 1) {
     params.single = false
 }
 else {
@@ -104,8 +106,8 @@ workflow basecalling_wf {
 //xxxxxxxxxxxxx//
 
 workflow {
-    combiner(runInfo_ch, basecalling_wf(dir_input_ch))
-    //basecalling_wf.out.fastq_channel.view()
+    combiner(runInfo_ch, kitInfo_ch, basecalling_wf(dir_input_ch))
+    combiner.out.view()
 }
 
 //basecalling_wf.out.fastq_channel.view()
